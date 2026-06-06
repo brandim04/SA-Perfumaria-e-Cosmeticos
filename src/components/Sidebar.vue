@@ -22,6 +22,10 @@ const emit = defineEmits([
     <h3>Marcas</h3>
 
     <ul>
+  <li @click="emit('filtrarMarca', null)">
+    Todas as marcas
+  </li>
+
   <li
     v-for="marca in marcas"
     :key="marca.id"

@@ -1,3 +1,7 @@
+<script setup>
+const emit = defineEmits(['buscar'])
+</script>
+
 <template>
   <header class="header">
     <h2>Samara Adriana</h2>
@@ -6,6 +10,7 @@
       type="text"
       placeholder="Buscar produtos..."
       class="search"
+      @input="emit('buscar', $event.target.value)"
     />
 
     <button class="cart">

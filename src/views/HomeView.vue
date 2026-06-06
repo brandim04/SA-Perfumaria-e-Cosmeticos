@@ -13,6 +13,7 @@ const produtos = ref([])
 
 const marcaSelecionada = ref(null)
 const categoriaSelecionada = ref(null)
+const busca = ref('')
 
 async function carregarDados() {
   const { data: marcasData, error: marcasError } =
@@ -49,10 +50,12 @@ async function carregarDados() {
 
 function filtrarMarca(id) {
   marcaSelecionada.value = id
+  categoriaSelecionada.value = null
 }
 
 function filtrarCategoria(id) {
   categoriaSelecionada.value = id
+  marcaSelecionada.value = null
 }
 
 const produtosFiltrados = computed(() => {
@@ -70,6 +73,14 @@ const produtosFiltrados = computed(() => {
     )
   }
 
+  if (busca.value.trim()) {
+    resultado = resultado.filter(produto =>
+      produto.nome
+        .toLowerCase()
+        .includes(busca.value.toLowerCase())
+    )
+  }
+
   return resultado
 })
 
@@ -80,7 +91,7 @@ onMounted(() => {
 
 <template>
   <div>
-    <Header />
+    <Header @buscar="busca = $event" />
 
     <main class="container">
       <Sidebar
@@ -91,7 +102,9 @@ onMounted(() => {
       />
 
       <section class="content">
-        <h1>Produtos</h1>
+        <h1>
+          Produtos ({{ produtosFiltrados.length }})
+        </h1>
 
         <div class="produtos-grid">
           <ProductCard
