@@ -28,8 +28,13 @@ async function carregarDados() {
 
   const { data: produtosData, error: produtosError } =
     await supabase
-      .from('produtos')
-      .select('*')
+  .from('produtos')
+  .select(`
+    *,
+    marcas (
+      nome
+    )
+  `)
 
   if (marcasError) {
     console.error('Erro ao carregar marcas:', marcasError)

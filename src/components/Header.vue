@@ -1,5 +1,21 @@
 <script setup>
+import { computed } from 'vue'
+import { useCartStore } from '../stores/cart'
+import { useRouter } from 'vue-router'
+
 const emit = defineEmits(['buscar'])
+
+const cart = useCartStore()
+
+const router = useRouter()
+
+const quantidadeItens = computed(() => {
+  return cart.itens.length
+})
+
+function abrirCarrinho() {
+  router.push('/carrinho')
+}
 </script>
 
 <template>
@@ -13,8 +29,11 @@ const emit = defineEmits(['buscar'])
       @input="emit('buscar', $event.target.value)"
     />
 
-    <button class="cart">
-      Carrinho
+    <button
+  class="cart"
+  @click="abrirCarrinho"
+>
+  Carrinho ({{ quantidadeItens }})
     </button>
   </header>
 </template>
@@ -49,5 +68,7 @@ const emit = defineEmits(['buscar'])
   padding: 0.7rem 1rem;
 
   cursor: pointer;
+
+  font-weight: bold;
 }
 </style>
