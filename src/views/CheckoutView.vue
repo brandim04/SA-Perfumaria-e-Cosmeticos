@@ -1,10 +1,14 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 
 import { useCartStore } from '../stores/cart'
 import { supabase } from '../lib/supabase'
 
+const router = useRouter()
 const cart = useCartStore()
+
+const telefoneVendedora = '5586988586598'
 
 const nome = ref('')
 const email = ref('')
@@ -23,8 +27,7 @@ const totalPedido = computed(() => {
 })
 
 onMounted(() => {
-  const clienteSalvo =
-    localStorage.getItem('cliente')
+  const clienteSalvo = localStorage.getItem('cliente')
 
   if (clienteSalvo) {
     const dados = JSON.parse(clienteSalvo)
@@ -41,14 +44,12 @@ onMounted(() => {
 
 async function confirmarPedido() {
   try {
-
     if (cart.itens.length === 0) {
       alert('Carrinho vazio')
       return
     }
 
     if (!clienteExistente.value) {
-
       const {
         data: clienteData,
         error: clienteError
@@ -58,7 +59,7 @@ async function confirmarPedido() {
           nome: nome.value,
           email: email.value,
           telefone: telefone.value,
-          aniversario: aniversario.value,
+          aniversario: aniversario.value
         })
         .select()
         .single()
@@ -78,7 +79,7 @@ async function confirmarPedido() {
           nome: nome.value,
           email: email.value,
           telefone: telefone.value,
-          aniversario: aniversario.value,
+          aniversario: aniversario.value
         })
       )
     }
@@ -103,17 +104,14 @@ async function confirmarPedido() {
       return
     }
 
-    const itensPedido =
-      cart.itens.map(produto => ({
-        pedido_id: pedidoData.id,
-        produto_id: produto.id,
-        quantidade: 1,
-        preco_unitario: produto.preco
-      }))
+    const itensPedido = cart.itens.map(produto => ({
+      pedido_id: pedidoData.id,
+      produto_id: produto.id,
+      quantidade: 1,
+      preco_unitario: produto.preco
+    }))
 
-    const {
-      error: itensError
-    } = await supabase
+    const { error: itensError } = await supabase
       .from('itens_pedido')
       .insert(itensPedido)
 
@@ -123,9 +121,42 @@ async function confirmarPedido() {
       return
     }
 
-    alert('Pedido realizado com sucesso!')
+    const listaProdutos = cart.itens
+      .map(
+        produto =>
+          `• ${produto.nome} - R$ ${Number(produto.preco).toFixed(2)}`
+      )
+      .join('\n')
+
+    const mensagem = `
+Olá Samara!
+
+Novo pedido realizado.
+
+Cliente: ${nome.value}
+Telefone: ${telefone.value}
+
+Produtos:
+${listaProdutos}
+
+Total: R$ ${totalPedido.value.toFixed(2)}
+
+Pagamento: ${formaPagamento.value}
+`
+
+    const mensagemCodificada =
+      encodeURIComponent(mensagem)
+
+    window.open(
+      `https://wa.me/${telefoneVendedora}?text=${mensagemCodificada}`,
+      '_blank'
+    )
 
     cart.limparCarrinho()
+
+    alert('Pedido realizado com sucesso!')
+
+    router.push('/')
 
   } catch (error) {
     console.error(error)
@@ -138,67 +169,77 @@ async function confirmarPedido() {
   <div class="container">
     <h1>Finalizar Pedido</h1>
 
-    <form class="formulario">
-      <div v-if="clienteExistente" class="cliente-info">
-        <p>
-          Bem-vindo novamente,
-          <strong>{{ nome }}</strong>
-        </p>
+```
+<form class="formulario">
+  <div
+    v-if="clienteExistente"
+    class="cliente-info"
+  >
+    <p>
+      Bem-vindo novamente,
+      <strong>{{ nome }}</strong>
+    </p>
 
-        <p>
-          WhatsApp: {{ telefone }}
-        </p>
-      </div>
+    <p>
+      WhatsApp: {{ telefone }}
+    </p>
+  </div>
 
-      <input
-        v-if="!clienteExistente"
-        v-model="nome"
-        type="text"
-        placeholder="Nome completo"
-      />
+  <input
+    v-if="!clienteExistente"
+    v-model="nome"
+    type="text"
+    placeholder="Nome completo"
+  />
 
-      <input
-        v-if="!clienteExistente"
-        v-model="email"
-        type="email"
-        placeholder="E-mail"
-      />
+  <input
+    v-if="!clienteExistente"
+    v-model="email"
+    type="email"
+    placeholder="E-mail"
+  />
 
-      <input
-        v-if="!clienteExistente"
-        v-model="telefone"
-        type="text"
-        placeholder="WhatsApp"
-      />
+  <input
+    v-if="!clienteExistente"
+    v-model="telefone"
+    type="text"
+    placeholder="WhatsApp"
+  />
 
-      <label v-if="!clienteExistente">
-        Data de nascimento
-      </label>
+  <label v-if="!clienteExistente">
+    Data de nascimento
+  </label>
 
-      <input
-        v-if="!clienteExistente"
-        v-model="aniversario"
-        type="date"
-      />
+  <input
+    v-if="!clienteExistente"
+    v-model="aniversario"
+    type="date"
+  />
 
-      <label>
-        Forma de pagamento
-      </label>
+  <label>
+    Forma de pagamento
+  </label>
 
-      <select v-model="formaPagamento">
-        <option>PIX</option>
-        <option>Dinheiro</option>
-        <option>Cartão de Débito</option>
-        <option>Cartão de Crédito</option>
-      </select>
+  <select v-model="formaPagamento">
+    <option>PIX</option>
+    <option>Dinheiro</option>
+    <option>Cartão de Débito</option>
+    <option>Cartão de Crédito</option>
+  </select>
 
-      <button
-        type="button"
-        @click="confirmarPedido"
-      >
-        Confirmar Pedido
-      </button>
-    </form>
+  <div class="total">
+    Total: R$ {{ totalPedido.toFixed(2) }}
+  </div>
+
+  <button
+    type="button"
+    @click="confirmarPedido"
+  >
+    Confirmar Pedido
+  </button>
+</form>
+```
+
   </div>
 </template>
 
@@ -233,17 +274,19 @@ select {
   border-radius: 8px;
 }
 
+.total {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #6f0716;
+}
+
 button {
   background: #6f0716;
   color: #e5c89a;
-
   border: none;
   border-radius: 8px;
-
   padding: 1rem;
-
   cursor: pointer;
-
   font-weight: bold;
 }
 </style>
