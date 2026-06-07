@@ -1,143 +1,420 @@
 <script setup>
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useCartStore } from '../stores/cart'
 
+const router = useRouter()
 const cart = useCartStore()
+
+function voltarParaLoja() {
+  router.push('/')
+}
+
+function irParaCheckout() {
+  router.push('/checkout')
+}
 
 const total = computed(() => {
   return cart.itens.reduce(
     (soma, produto) =>
-      soma + Number(produto.preco),
+      soma + Number(produto.preco) * produto.quantidade,
     0
   )
 })
 </script>
 
 <template>
-  <div class="container">
-    <h1>Meu Carrinho</h1>
+  <div class="pagina-carrinho">
+    <div class="topo">
+      <div>
+        <h1>Meu Carrinho</h1>
+        <p>Confira os produtos antes de finalizar seu pedido.</p>
+      </div>
 
-    <div v-if="cart.itens.length === 0">
-      <p>Seu carrinho está vazio.</p>
+      <button
+        type="button"
+        class="botao-voltar"
+        @click="voltarParaLoja"
+      >
+        ← Voltar para a loja
+      </button>
     </div>
 
-    <div v-else>
-  <div
-    v-for="(produto, index) in cart.itens"
-    :key="index"
-    class="item"
-  >
-    <div>
-      <h3>{{ produto.nome }}</h3>
+    <div v-if="cart.itens.length === 0" class="carrinho-vazio">
+      <h2>Seu carrinho está vazio</h2>
+      <p>Adicione produtos para continuar seu pedido.</p>
 
-      <p>
-        R$ {{ Number(produto.preco).toFixed(2) }}
-      </p>
+      <button
+        type="button"
+        class="botao-principal"
+        @click="voltarParaLoja"
+      >
+        Ver produtos
+      </button>
     </div>
 
-    <button
-      class="remover"
-      @click="cart.removerProduto(index)"
-    >
-      Remover
-    </button>
-  </div>
+    <div v-else class="conteudo-carrinho">
+      <section class="lista-produtos">
+        <div
+          v-for="produto in cart.itens"
+          :key="produto.id"
+          class="item-carrinho"
+        >
+          <div class="imagem-produto">
+            <img
+              v-if="produto.imagem"
+              :src="produto.imagem"
+              :alt="produto.nome"
+            />
 
-  <div class="resumo">
-    <h2>
-      Total:
-      R$ {{ total.toFixed(2) }}
-    </h2>
+            <span v-else>
+              Sem imagem
+            </span>
+          </div>
 
-    <router-link
-  to="/checkout"
-  class="finalizar"
->
-  Finalizar Pedido
-    </router-link>
+          <div class="info-produto">
+            <p class="marca">
+              {{ produto.marcas?.nome }}
+            </p>
 
-    <button
-      class="limpar"
-      @click="cart.limparCarrinho()"
-    >
-      Limpar Carrinho
-    </button>
-  </div>
-</div>
+            <h3>{{ produto.nome }}</h3>
+
+            <p class="estoque">
+              Estoque disponível: {{ produto.estoque }}
+            </p>
+
+            <button
+              type="button"
+              class="remover"
+              @click="cart.removerProduto(produto.id)"
+            >
+              Remover
+            </button>
+          </div>
+
+          <div class="controle-quantidade">
+            <p>Quantidade</p>
+
+            <div class="botoes-quantidade">
+              <button
+                type="button"
+                @click="cart.diminuirQuantidade(produto.id)"
+              >
+                -
+              </button>
+
+              <span>{{ produto.quantidade }}</span>
+
+              <button
+                type="button"
+                @click="cart.aumentarQuantidade(produto.id)"
+                :disabled="produto.quantidade >= Number(produto.estoque)"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <div class="precos">
+            <p class="preco-unitario">
+              R$ {{ Number(produto.preco).toFixed(2) }} un.
+            </p>
+
+            <strong>
+              R$ {{ (Number(produto.preco) * produto.quantidade).toFixed(2) }}
+            </strong>
+          </div>
+        </div>
+      </section>
+
+      <aside class="resumo">
+        <h2>Resumo do pedido</h2>
+
+        <div class="linha-resumo">
+          <span>Itens</span>
+          <strong>{{ cart.totalItens }}</strong>
+        </div>
+
+        <div class="linha-resumo total">
+          <span>Total</span>
+          <strong>R$ {{ total.toFixed(2) }}</strong>
+        </div>
+
+        <button
+          type="button"
+          class="finalizar"
+          @click="irParaCheckout"
+        >
+          Finalizar Pedido
+        </button>
+
+        <button
+          type="button"
+          class="limpar"
+          @click="cart.limparCarrinho()"
+        >
+          Limpar Carrinho
+        </button>
+      </aside>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.container {
-  max-width: 1000px;
+.pagina-carrinho {
+  max-width: 1180px;
   margin: 0 auto;
   padding: 2rem;
 }
 
-h1 {
-  color: #6f0716;
+.topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   margin-bottom: 2rem;
 }
 
-.item {
-  background: white;
-
-  border-radius: 12px;
-
-  padding: 1rem;
-
-  margin-bottom: 1rem;
-
-  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+h1 {
+  color: #6f0716;
+  margin: 0;
 }
 
-.remover {
-  background: #c62828;
-  color: white;
+.topo p {
+  color: #777;
+  margin-top: 0.4rem;
+}
 
-  border: none;
-  border-radius: 8px;
-
-  padding: 0.7rem 1rem;
-
+.botao-voltar {
+  background: #ffffff;
+  color: #6f0716;
+  border: 1px solid #6f0716;
+  border-radius: 999px;
+  padding: 0.75rem 1.2rem;
+  font-weight: bold;
   cursor: pointer;
 }
 
-.resumo {
-  margin-top: 2rem;
-
-  padding-top: 1rem;
-
-  border-top: 2px solid #eee;
+.carrinho-vazio {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 3rem 2rem;
+  text-align: center;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
 }
 
-.limpar {
-  margin-top: 1rem;
+.carrinho-vazio h2 {
+  color: #6f0716;
+  margin-bottom: 0.5rem;
+}
 
+.carrinho-vazio p {
+  color: #777;
+  margin-bottom: 1.5rem;
+}
+
+.botao-principal {
   background: #6f0716;
   color: #e5c89a;
-
   border: none;
-  border-radius: 8px;
+  border-radius: 999px;
+  padding: 0.9rem 1.4rem;
+  font-weight: bold;
+  cursor: pointer;
+}
 
-  padding: 0.9rem 1.2rem;
+.conteudo-carrinho {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
 
+.lista-produtos {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.item-carrinho {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 1rem;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+
+  display: grid;
+  grid-template-columns: 110px 1fr 160px 140px;
+  gap: 1rem;
+  align-items: center;
+}
+
+.imagem-produto {
+  width: 110px;
+  height: 110px;
+  background: #f8f6f4;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 0.8rem;
+  overflow: hidden;
+}
+
+.imagem-produto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.marca {
+  color: #9a7b34;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 1px;
+  margin: 0 0 0.35rem;
+}
+
+.info-produto h3 {
+  margin: 0;
+  color: #333;
+}
+
+.estoque {
+  color: #777;
+  font-size: 0.9rem;
+  margin: 0.5rem 0;
+}
+
+.remover {
+  background: transparent;
+  color: #c62828;
+  border: none;
+  padding: 0;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.controle-quantidade p {
+  margin: 0 0 0.5rem;
+  color: #777;
+  font-size: 0.9rem;
+}
+
+.botoes-quantidade {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.botoes-quantidade button {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: #6f0716;
+  color: #e5c89a;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.botoes-quantidade button:disabled {
+  background: #ccc;
+  color: #777;
+  cursor: not-allowed;
+}
+
+.botoes-quantidade span {
+  min-width: 28px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.precos {
+  text-align: right;
+}
+
+.preco-unitario {
+  color: #777;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.precos strong {
+  color: #6f0716;
+  font-size: 1.1rem;
+}
+
+.resumo {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 1.4rem;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 1rem;
+}
+
+.resumo h2 {
+  color: #6f0716;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+.linha-resumo {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  color: #555;
+}
+
+.linha-resumo.total {
+  border-top: 1px solid #eee;
+  padding-top: 1rem;
+  font-size: 1.2rem;
+  color: #6f0716;
+}
+
+.finalizar,
+.limpar {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 1rem;
+  font-weight: bold;
   cursor: pointer;
 }
 
 .finalizar {
-  display: inline-block;
-
+  background: #6f0716;
+  color: #e5c89a;
   margin-top: 1rem;
-  margin-right: 1rem;
+}
 
-  text-decoration: none;
+.limpar {
+  background: #f8f6f4;
+  color: #6f0716;
+  margin-top: 0.8rem;
+}
 
-  background: #2e7d32;
-  color: white;
+@media (max-width: 900px) {
+  .conteudo-carrinho {
+    grid-template-columns: 1fr;
+  }
 
-  padding: 0.9rem 1.2rem;
+  .item-carrinho {
+    grid-template-columns: 90px 1fr;
+  }
 
-  border-radius: 8px;
+  .controle-quantidade,
+  .precos {
+    grid-column: span 2;
+    text-align: left;
+  }
+
+  .topo {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>

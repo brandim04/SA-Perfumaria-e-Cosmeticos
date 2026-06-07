@@ -19,9 +19,14 @@ const formaPagamento = ref('PIX')
 const clienteExistente = ref(false)
 const clienteId = ref(null)
 
+function voltarParaCarrinho() {
+  router.push('/carrinho')
+}
+
 const totalPedido = computed(() => {
   return cart.itens.reduce(
-    (total, item) => total + Number(item.preco),
+    (total, item) =>
+      total + Number(item.preco) * item.quantidade,
     0
   )
 })
@@ -50,10 +55,7 @@ async function confirmarPedido() {
     }
 
     if (!clienteExistente.value) {
-      const {
-        data: clienteData,
-        error: clienteError
-      } = await supabase
+      const { data: clienteData, error: clienteError } = await supabase
         .from('clientes')
         .insert({
           nome: nome.value,
@@ -84,10 +86,7 @@ async function confirmarPedido() {
       )
     }
 
-    const {
-      data: pedidoData,
-      error: pedidoError
-    } = await supabase
+    const { data: pedidoData, error: pedidoError } = await supabase
       .from('pedidos')
       .insert({
         cliente_id: clienteId.value,
@@ -107,7 +106,7 @@ async function confirmarPedido() {
     const itensPedido = cart.itens.map(produto => ({
       pedido_id: pedidoData.id,
       produto_id: produto.id,
-      quantidade: 1,
+      quantidade: produto.quantidade,
       preco_unitario: produto.preco
     }))
 
@@ -122,10 +121,11 @@ async function confirmarPedido() {
     }
 
     const listaProdutos = cart.itens
-      .map(
-        produto =>
-          `• ${produto.nome} - R$ ${Number(produto.preco).toFixed(2)}`
-      )
+      .map(produto => {
+        const subtotal = Number(produto.preco) * produto.quantidade
+
+        return `• ${produto.quantidade}x ${produto.nome} - R$ ${subtotal.toFixed(2)}`
+      })
       .join('\n')
 
     const mensagem = `
@@ -144,8 +144,7 @@ Total: R$ ${totalPedido.value.toFixed(2)}
 Pagamento: ${formaPagamento.value}
 `
 
-    const mensagemCodificada =
-      encodeURIComponent(mensagem)
+    const mensagemCodificada = encodeURIComponent(mensagem)
 
     window.open(
       `https://wa.me/${telefoneVendedora}?text=${mensagemCodificada}`,
@@ -157,7 +156,6 @@ Pagamento: ${formaPagamento.value}
     alert('Pedido realizado com sucesso!')
 
     router.push('/')
-
   } catch (error) {
     console.error(error)
     alert('Erro ao finalizar pedido')
@@ -166,93 +164,163 @@ Pagamento: ${formaPagamento.value}
 </script>
 
 <template>
-  <div class="container">
-    <h1>Finalizar Pedido</h1>
+  <div class="pagina-checkout">
+    <div class="topo">
+      <div>
+        <h1>Finalizar Pedido</h1>
+        <p>Preencha os dados para enviar o pedido pelo WhatsApp.</p>
+      </div>
 
-```
-<form class="formulario">
-  <div
-    v-if="clienteExistente"
-    class="cliente-info"
-  >
-    <p>
-      Bem-vindo novamente,
-      <strong>{{ nome }}</strong>
-    </p>
+      <button
+        type="button"
+        class="botao-voltar"
+        @click="voltarParaCarrinho"
+      >
+        ← Voltar para o carrinho
+      </button>
+    </div>
 
-    <p>
-      WhatsApp: {{ telefone }}
-    </p>
-  </div>
+    <div class="checkout-grid">
+      <form class="formulario">
+        <div
+          v-if="clienteExistente"
+          class="cliente-info"
+        >
+          <p>
+            Bem-vindo novamente,
+            <strong>{{ nome }}</strong>
+          </p>
 
-  <input
-    v-if="!clienteExistente"
-    v-model="nome"
-    type="text"
-    placeholder="Nome completo"
-  />
+          <p>
+            WhatsApp: {{ telefone }}
+          </p>
+        </div>
 
-  <input
-    v-if="!clienteExistente"
-    v-model="email"
-    type="email"
-    placeholder="E-mail"
-  />
+        <input
+          v-if="!clienteExistente"
+          v-model="nome"
+          type="text"
+          placeholder="Nome completo"
+        />
 
-  <input
-    v-if="!clienteExistente"
-    v-model="telefone"
-    type="text"
-    placeholder="WhatsApp"
-  />
+        <input
+          v-if="!clienteExistente"
+          v-model="email"
+          type="email"
+          placeholder="E-mail"
+        />
 
-  <label v-if="!clienteExistente">
-    Data de nascimento
-  </label>
+        <input
+          v-if="!clienteExistente"
+          v-model="telefone"
+          type="text"
+          placeholder="WhatsApp"
+        />
 
-  <input
-    v-if="!clienteExistente"
-    v-model="aniversario"
-    type="date"
-  />
+        <label v-if="!clienteExistente">
+          Data de nascimento
+        </label>
 
-  <label>
-    Forma de pagamento
-  </label>
+        <input
+          v-if="!clienteExistente"
+          v-model="aniversario"
+          type="date"
+        />
 
-  <select v-model="formaPagamento">
-    <option>PIX</option>
-    <option>Dinheiro</option>
-    <option>Cartão de Débito</option>
-    <option>Cartão de Crédito</option>
-  </select>
+        <label>
+          Forma de pagamento
+        </label>
 
-  <div class="total">
-    Total: R$ {{ totalPedido.toFixed(2) }}
-  </div>
+        <select v-model="formaPagamento">
+          <option>PIX</option>
+          <option>Dinheiro</option>
+          <option>Cartão de Débito</option>
+          <option>Cartão de Crédito</option>
+        </select>
 
-  <button
-    type="button"
-    @click="confirmarPedido"
-  >
-    Confirmar Pedido
-  </button>
-</form>
-```
+        <button
+          type="button"
+          class="confirmar"
+          @click="confirmarPedido"
+        >
+          Confirmar Pedido
+        </button>
+      </form>
 
+      <aside class="resumo">
+        <h2>Resumo</h2>
+
+        <div
+          v-for="produto in cart.itens"
+          :key="produto.id"
+          class="item-resumo"
+        >
+          <span>
+            {{ produto.quantidade }}x {{ produto.nome }}
+          </span>
+
+          <strong>
+            R$ {{ (Number(produto.preco) * produto.quantidade).toFixed(2) }}
+          </strong>
+        </div>
+
+        <div class="total">
+          <span>Total</span>
+          <strong>R$ {{ totalPedido.toFixed(2) }}</strong>
+        </div>
+      </aside>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.container {
-  max-width: 700px;
+.pagina-checkout {
+  max-width: 1100px;
   margin: 0 auto;
   padding: 2rem;
 }
 
+.topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
 h1 {
   color: #6f0716;
-  margin-bottom: 2rem;
+  margin: 0;
+}
+
+.topo p {
+  color: #777;
+  margin-top: 0.4rem;
+}
+
+.botao-voltar {
+  background: #ffffff;
+  color: #6f0716;
+  border: 1px solid #6f0716;
+  border-radius: 999px;
+  padding: 0.75rem 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.checkout-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.formulario,
+.resumo {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
 }
 
 .formulario {
@@ -264,29 +332,77 @@ h1 {
 .cliente-info {
   background: #f8f6f4;
   padding: 1rem;
-  border-radius: 8px;
+  border-radius: 12px;
+  color: #333;
 }
 
 input,
 select {
-  padding: 0.9rem;
+  padding: 0.95rem;
   border: 1px solid #ddd;
-  border-radius: 8px;
+  border-radius: 10px;
+  outline: none;
 }
 
-.total {
-  font-size: 1.2rem;
+label {
   font-weight: bold;
   color: #6f0716;
 }
 
-button {
+.confirmar {
   background: #6f0716;
   color: #e5c89a;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 1rem;
   cursor: pointer;
   font-weight: bold;
+  margin-top: 0.5rem;
+}
+
+.resumo h2 {
+  color: #6f0716;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+.item-resumo {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  color: #555;
+}
+
+.item-resumo span {
+  flex: 1;
+}
+
+.item-resumo strong {
+  color: #6f0716;
+  white-space: nowrap;
+}
+
+.total {
+  border-top: 1px solid #eee;
+  padding-top: 1rem;
+  margin-top: 1rem;
+
+  display: flex;
+  justify-content: space-between;
+
+  color: #6f0716;
+  font-size: 1.2rem;
+}
+
+@media (max-width: 850px) {
+  .checkout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .topo {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>
