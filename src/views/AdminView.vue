@@ -14,6 +14,8 @@ const faturamentoTotal = ref(0)
 const pedidosPendentes = ref(0)
 const pedidosCancelados = ref(0)
 const ultimosPedidos = ref([])
+const produtosEstoqueBaixo = ref([])
+const aniversariantesMes = ref([])
 
 const ticketMedio = computed(() => {
   if (totalPedidos.value === 0) return 0
@@ -42,21 +44,23 @@ async function carregarMetricas() {
 
   const { data: clientesData } = await supabase
     .from('clientes')
-    .select('id')
+    .select('id, nome, telefone, aniversario')
 
   const { data: produtosData } = await supabase
     .from('produtos')
-    .select('id')
+    .select('id, nome, estoque')
 
   const pedidos = pedidosData || []
+  const clientes = clientesData || []
+  const produtos = produtosData || []
 
   const pedidosValidos = pedidos.filter(pedido =>
     pedido.status === 'Pago' || pedido.status === 'Concluído'
   )
 
   totalPedidos.value = pedidosValidos.length
-  totalClientes.value = clientesData?.length || 0
-  totalProdutos.value = produtosData?.length || 0
+  totalClientes.value = clientes.length
+  totalProdutos.value = produtos.length
 
   pedidosPendentes.value = pedidos.filter(
     pedido => pedido.status === 'Pendente'
@@ -72,6 +76,23 @@ async function carregarMetricas() {
   )
 
   ultimosPedidos.value = pedidos.slice(0, 5)
+
+  produtosEstoqueBaixo.value = produtos
+    .filter(produto => Number(produto.estoque || 0) <= 5)
+    .sort((a, b) => Number(a.estoque || 0) - Number(b.estoque || 0))
+    .slice(0, 5)
+
+  const mesAtual = new Date().getMonth() + 1
+
+  aniversariantesMes.value = clientes
+    .filter(cliente => {
+      if (!cliente.aniversario) return false
+
+      const mesAniversario = Number(cliente.aniversario.split('-')[1])
+
+      return mesAniversario === mesAtual
+    })
+    .slice(0, 5)
 }
 
 function formatarData(data) {
@@ -84,6 +105,16 @@ function classeStatus(status) {
   if (status === 'Concluído') return 'concluido'
   if (status === 'Cancelado') return 'cancelado'
   return 'pendente'
+}
+
+function formatarAniversario(data) {
+  if (!data) return '-'
+
+  const partes = data.split('-')
+
+  if (partes.length !== 3) return data
+
+  return `${partes[2]}/${partes[1]}`
 }
 
 onMounted(() => {
@@ -182,6 +213,74 @@ onMounted(() => {
         <h2>Clientes</h2>
         <p>Consulte clientes cadastrados, aniversários e histórico de compras.</p>
       </router-link>
+    </section>
+
+    <section class="extras-grid">
+      <div class="painel-extra">
+        <div class="titulo-extra">
+          <h2>Estoque baixo</h2>
+
+          <router-link to="/admin/produtos">
+            Ver produtos
+          </router-link>
+        </div>
+
+        <div
+          v-if="produtosEstoqueBaixo.length === 0"
+          class="mensagem-vazia"
+        >
+          Nenhum produto com estoque baixo.
+        </div>
+
+        <div
+          v-for="produto in produtosEstoqueBaixo"
+          :key="produto.id"
+          class="linha-extra"
+        >
+          <div>
+            <strong>{{ produto.nome }}</strong>
+            <span>Estoque atual</span>
+          </div>
+
+          <span
+            :class="['badge-estoque', Number(produto.estoque || 0) === 0 ? 'zerado' : 'baixo']"
+          >
+            {{ produto.estoque ?? 0 }}
+          </span>
+        </div>
+      </div>
+
+      <div class="painel-extra">
+        <div class="titulo-extra">
+          <h2>Aniversariantes do mês</h2>
+
+          <router-link to="/admin/clientes">
+            Ver clientes
+          </router-link>
+        </div>
+
+        <div
+          v-if="aniversariantesMes.length === 0"
+          class="mensagem-vazia"
+        >
+          Nenhum aniversariante neste mês.
+        </div>
+
+        <div
+          v-for="cliente in aniversariantesMes"
+          :key="cliente.id"
+          class="linha-extra"
+        >
+          <div>
+            <strong>{{ cliente.nome }}</strong>
+            <span>{{ cliente.telefone || 'Telefone não informado' }}</span>
+          </div>
+
+          <span class="badge-aniversario">
+            {{ formatarAniversario(cliente.aniversario) }}
+          </span>
+        </div>
+      </div>
     </section>
 
     <section class="ultimos">
@@ -434,6 +533,15 @@ onMounted(() => {
   font-weight: bold;
 }
 
+.extras-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+
+  margin-bottom: 1.5rem;
+}
+
+.painel-extra,
 .ultimos {
   background: white;
   border-radius: 18px;
@@ -442,29 +550,99 @@ onMounted(() => {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
+.titulo-extra,
 .titulo-secao {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  align-items: center;
 
   margin-bottom: 1rem;
 }
 
+.titulo-extra h2,
 .titulo-secao h2 {
   color: #6f0716;
-  margin: 0 0 0.3rem;
+  margin: 0;
 }
 
 .titulo-secao p {
   color: #777;
-  margin: 0;
+  margin: 0.3rem 0 0;
 }
 
+.titulo-extra a,
 .titulo-secao a {
   color: #6f0716;
   font-weight: bold;
   text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.linha-extra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+
+  padding: 0.9rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.linha-extra:last-child {
+  border-bottom: none;
+}
+
+.linha-extra strong {
+  display: block;
+  color: #333;
+}
+
+.linha-extra span {
+  display: block;
+  color: #777;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+.badge-estoque,
+.badge-aniversario {
+  min-width: 42px;
+
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+
+  text-align: center;
+  font-weight: bold;
+  font-size: 0.85rem;
+}
+
+.badge-estoque.baixo {
+  background: #fff3cd;
+  color: #8a6d00;
+}
+
+.badge-estoque.zerado {
+  background: #fde0e0;
+  color: #c62828;
+}
+
+.badge-aniversario {
+  background: #f8f6f4;
+  color: #6f0716;
+  white-space: nowrap;
+}
+
+.mensagem-vazia,
+.vazio {
+  color: #777;
+  text-align: center;
+  padding: 1rem;
+}
+
+.mensagem-vazia {
+  background: #f8f6f4;
+  border-radius: 12px;
 }
 
 .tabela {
@@ -517,17 +695,16 @@ td {
   color: #c62828;
 }
 
-.vazio {
-  color: #777;
-  text-align: center;
-  padding: 1rem;
-}
-
 @media (max-width: 850px) {
   .topo,
-  .titulo-secao {
+  .titulo-secao,
+  .titulo-extra {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .extras-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

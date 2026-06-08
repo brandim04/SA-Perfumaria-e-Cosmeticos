@@ -4,7 +4,10 @@ import { useRouter } from 'vue-router'
 import { supabase } from '../lib/supabase'
 
 const router = useRouter()
+
 const pedidos = ref([])
+const pedidoSelecionado = ref(null)
+const modalAberto = ref(false)
 
 const statusOptions = [
   'Pendente',
@@ -24,7 +27,17 @@ async function carregarPedidos() {
       *,
       clientes (
         nome,
-        telefone
+        telefone,
+        email
+      ),
+      itens_pedido (
+        id,
+        quantidade,
+        preco_unitario,
+        produtos (
+          nome,
+          imagem
+        )
       )
     `)
     .order('created_at', {
@@ -57,6 +70,16 @@ async function atualizarStatus(pedido) {
   alert('Status atualizado com sucesso')
 }
 
+function abrirDetalhes(pedido) {
+  pedidoSelecionado.value = pedido
+  modalAberto.value = true
+}
+
+function fecharModal() {
+  pedidoSelecionado.value = null
+  modalAberto.value = false
+}
+
 function formatarData(data) {
   if (!data) return '-'
 
@@ -73,6 +96,10 @@ function classeStatus(status) {
   if (status === 'Cancelado') return 'cancelado'
 
   return 'pendente'
+}
+
+function subtotalItem(item) {
+  return Number(item.preco_unitario || 0) * Number(item.quantidade || 1)
 }
 
 onMounted(() => {
@@ -112,6 +139,7 @@ onMounted(() => {
             <th>Pagamento</th>
             <th>Status</th>
             <th>Alterar status</th>
+            <th>Detalhes</th>
           </tr>
         </thead>
 
@@ -160,9 +188,131 @@ onMounted(() => {
                 </option>
               </select>
             </td>
+
+            <td>
+              <button
+                type="button"
+                class="detalhes"
+                @click="abrirDetalhes(pedido)"
+              >
+                Ver detalhes
+              </button>
+            </td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div
+      v-if="modalAberto && pedidoSelecionado"
+      class="modal-fundo"
+      @click="fecharModal"
+    >
+      <div
+        class="modal-card"
+        @click.stop
+      >
+        <button
+          type="button"
+          class="fechar"
+          @click="fecharModal"
+        >
+          ✕
+        </button>
+
+        <div class="modal-topo">
+          <div>
+            <h2>Detalhes do pedido</h2>
+            <p>
+              Pedido realizado em {{ formatarData(pedidoSelecionado.created_at) }}
+            </p>
+          </div>
+
+          <span :class="['status', classeStatus(pedidoSelecionado.status)]">
+            {{ pedidoSelecionado.status }}
+          </span>
+        </div>
+
+        <section class="cliente-box">
+          <h3>Cliente</h3>
+
+          <p>
+            <strong>Nome:</strong>
+            {{ pedidoSelecionado.clientes?.nome || 'Não informado' }}
+          </p>
+
+          <p>
+            <strong>Telefone:</strong>
+            {{ pedidoSelecionado.clientes?.telefone || 'Não informado' }}
+          </p>
+
+          <p>
+            <strong>Email:</strong>
+            {{ pedidoSelecionado.clientes?.email || 'Não informado' }}
+          </p>
+        </section>
+
+        <section class="produtos-box">
+          <h3>Produtos do pedido</h3>
+
+          <div
+            v-if="!pedidoSelecionado.itens_pedido || pedidoSelecionado.itens_pedido.length === 0"
+            class="sem-itens"
+          >
+            Nenhum item encontrado para este pedido.
+          </div>
+
+          <div
+            v-for="item in pedidoSelecionado.itens_pedido"
+            :key="item.id"
+            class="item-pedido"
+          >
+            <div class="imagem-produto">
+              <img
+                v-if="item.produtos?.imagem"
+                :src="item.produtos.imagem.trim()"
+                :alt="item.produtos?.nome"
+              />
+
+              <span v-else>
+                Sem imagem
+              </span>
+            </div>
+
+            <div class="item-info">
+              <strong>
+                {{ item.produtos?.nome || 'Produto não encontrado' }}
+              </strong>
+
+              <p>
+                Quantidade: {{ item.quantidade }}
+              </p>
+
+              <p>
+                Valor unitário: R$ {{ Number(item.preco_unitario || 0).toFixed(2) }}
+              </p>
+            </div>
+
+            <div class="item-subtotal">
+              R$ {{ subtotalItem(item).toFixed(2) }}
+            </div>
+          </div>
+        </section>
+
+        <section class="resumo-box">
+          <div>
+            <span>Forma de pagamento</span>
+            <strong>{{ pedidoSelecionado.forma_pagamento }}</strong>
+          </div>
+
+          <div>
+            <span>Total do pedido</span>
+            <strong>
+              R$ {{ Number(pedidoSelecionado.valor_total || 0).toFixed(2) }}
+            </strong>
+          </div>
+        </section>
+      </div>
     </div>
   </div>
 </template>
@@ -255,6 +405,7 @@ td {
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: bold;
+  white-space: nowrap;
 }
 
 .pendente {
@@ -284,11 +435,209 @@ select {
   outline: none;
 }
 
+.detalhes {
+  background: #6f0716;
+  color: #e5c89a;
+
+  border: none;
+  border-radius: 10px;
+
+  padding: 0.65rem 0.9rem;
+
+  font-weight: bold;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.modal-fundo {
+  position: fixed;
+  inset: 0;
+
+  background: rgba(0, 0, 0, 0.55);
+
+  z-index: 9998;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 1rem;
+}
+
+.modal-card {
+  position: relative;
+
+  width: 100%;
+  max-width: 850px;
+  max-height: 90vh;
+
+  overflow-y: auto;
+
+  background: white;
+
+  border-radius: 20px;
+  padding: 2rem;
+
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+}
+
+.fechar {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+
+  width: 38px;
+  height: 38px;
+
+  border: none;
+  border-radius: 50%;
+
+  background: #6f0716;
+  color: #e5c89a;
+
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.modal-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+
+  margin-bottom: 1.5rem;
+}
+
+.modal-topo h2 {
+  color: #6f0716;
+  margin: 0;
+}
+
+.modal-topo p {
+  color: #777;
+  margin: 0.4rem 0 0;
+}
+
+.cliente-box,
+.produtos-box,
+.resumo-box {
+  border: 1px solid #eee;
+  border-radius: 16px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.cliente-box h3,
+.produtos-box h3 {
+  color: #6f0716;
+  margin-top: 0;
+}
+
+.cliente-box p {
+  color: #555;
+  margin: 0.5rem 0;
+}
+
+.item-pedido {
+  display: grid;
+  grid-template-columns: 70px 1fr 120px;
+  gap: 1rem;
+  align-items: center;
+
+  padding: 0.9rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.item-pedido:last-child {
+  border-bottom: none;
+}
+
+.imagem-produto {
+  width: 70px;
+  height: 70px;
+
+  background: #f8f6f4;
+  border-radius: 12px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #999;
+  font-size: 0.75rem;
+
+  overflow: hidden;
+}
+
+.imagem-produto img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 0.4rem;
+}
+
+.item-info strong {
+  color: #333;
+}
+
+.item-info p {
+  margin: 0.25rem 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.item-subtotal {
+  text-align: right;
+  color: #6f0716;
+  font-weight: bold;
+}
+
+.resumo-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.resumo-box div {
+  background: #f8f6f4;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.resumo-box span {
+  display: block;
+  color: #777;
+  margin-bottom: 0.4rem;
+}
+
+.resumo-box strong {
+  color: #6f0716;
+  font-size: 1.1rem;
+}
+
+.sem-itens {
+  color: #777;
+  padding: 1rem 0;
+}
+
 @media (max-width: 700px) {
-  .topo {
+  .topo,
+  .modal-topo {
     flex-direction: column;
     align-items: flex-start;
-    gap: 1rem;
+  }
+
+  .item-pedido {
+    grid-template-columns: 60px 1fr;
+  }
+
+  .item-subtotal {
+    grid-column: span 2;
+    text-align: left;
+  }
+
+  .resumo-box {
+    grid-template-columns: 1fr;
   }
 }
 </style>
