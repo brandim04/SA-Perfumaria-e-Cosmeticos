@@ -29,34 +29,37 @@ const router = createRouter({
       component: CheckoutView,
     },
     {
-      path: '/login',
+      path: '/gestao',
       name: 'login',
       component: LoginView,
     },
-
     {
       path: '/admin',
       name: 'admin',
       component: AdminView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/admin/pedidos',
       name: 'admin-pedidos',
       component: AdminPedidosView,
-     meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/admin/produtos',
       name: 'admin-produtos',
       component: AdminProdutosView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/admin/clientes',
       name: 'admin-clientes',
       component: AdminClientesView,
-  meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/login',
+      redirect: '/gestao',
     },
   ],
 })
@@ -65,7 +68,7 @@ router.beforeEach((to, from, next) => {
   const adminLogado = localStorage.getItem('admin')
 
   if (to.meta.requiresAuth && !adminLogado) {
-    next('/login')
+    next('/gestao')
   } else {
     next()
   }

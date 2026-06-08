@@ -32,11 +32,14 @@ async function carregarPedidos() {
       ),
       itens_pedido (
         id,
+        produto_id,
         quantidade,
         preco_unitario,
         produtos (
+          id,
           nome,
-          imagem
+          imagem,
+          estoque
         )
       )
     `)
@@ -53,7 +56,58 @@ async function carregarPedidos() {
   pedidos.value = data || []
 }
 
+async function baixarEstoque(pedido) {
+  for (const item of pedido.itens_pedido || []) {
+    const produto = item.produtos
+
+    if (!produto) continue
+
+    const estoqueAtual = Number(produto.estoque || 0)
+    const quantidadeComprada = Number(item.quantidade || 1)
+    const novoEstoque = Math.max(estoqueAtual - quantidadeComprada, 0)
+
+    const { error } = await supabase
+      .from('produtos')
+      .update({
+        estoque: novoEstoque
+      })
+      .eq('id', produto.id)
+
+    if (error) {
+      console.error(error)
+      alert(`Erro ao baixar estoque do produto ${produto.nome}`)
+      return false
+    }
+  }
+
+  return true
+}
+
 async function atualizarStatus(pedido) {
+  if (pedido.status === 'Concluído' && !pedido.estoque_baixado) {
+    const estoqueBaixado = await baixarEstoque(pedido)
+
+    if (!estoqueBaixado) return
+
+    const { error } = await supabase
+      .from('pedidos')
+      .update({
+        status: pedido.status,
+        estoque_baixado: true
+      })
+      .eq('id', pedido.id)
+
+    if (error) {
+      console.error(error)
+      alert('Erro ao atualizar status')
+      return
+    }
+
+    alert('Status atualizado e estoque baixado com sucesso')
+    carregarPedidos()
+    return
+  }
+
   const { error } = await supabase
     .from('pedidos')
     .update({
@@ -68,6 +122,7 @@ async function atualizarStatus(pedido) {
   }
 
   alert('Status atualizado com sucesso')
+  carregarPedidos()
 }
 
 function abrirDetalhes(pedido) {
@@ -138,6 +193,7 @@ onMounted(() => {
             <th>Total</th>
             <th>Pagamento</th>
             <th>Status</th>
+            <th>Estoque</th>
             <th>Alterar status</th>
             <th>Detalhes</th>
           </tr>
@@ -171,6 +227,14 @@ onMounted(() => {
             <td>
               <span :class="['status', classeStatus(pedido.status)]">
                 {{ pedido.status }}
+              </span>
+            </td>
+
+            <td>
+              <span
+                :class="['estoque-status', pedido.estoque_baixado ? 'baixado' : 'nao-baixado']"
+              >
+                {{ pedido.estoque_baixado ? 'Baixado' : 'Pendente' }}
               </span>
             </td>
 
@@ -249,6 +313,11 @@ onMounted(() => {
           <p>
             <strong>Email:</strong>
             {{ pedidoSelecionado.clientes?.email || 'Não informado' }}
+          </p>
+
+          <p>
+            <strong>Estoque:</strong>
+            {{ pedidoSelecionado.estoque_baixado ? 'Já foi baixado' : 'Ainda não foi baixado' }}
           </p>
         </section>
 
@@ -639,5 +708,23 @@ select {
   .resumo-box {
     grid-template-columns: 1fr;
   }
+}
+
+.estoque-status {
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.estoque-status.baixado {
+  background: #dff5e1;
+  color: #2e7d32;
+}
+
+.estoque-status.nao-baixado {
+  background: #fff3cd;
+  color: #8a6d00;
 }
 </style>
