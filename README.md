@@ -8,7 +8,7 @@ A plataforma oferece uma área para os clientes realizarem compras online e uma 
 
 ---
 
-## Tecnologias Utilizadas
+## TecnologiAs Utilizadas
 
 ### Front-end
 - Vue.js 3
@@ -177,7 +177,7 @@ Sistema desenvolvido para gerenciamento de produtos, clientes e pedidos da loja.
 
 Link do vídeo:
 
-*(Inserir link do vídeo aqui)*
+*(https://youtu.be/AMYakYqytRc)*
 
 ---
 
