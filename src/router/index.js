@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 import HomeView from '../views/HomeView.vue'
 import CartView from '../views/CartView.vue'
@@ -71,9 +72,9 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const adminLogado = localStorage.getItem('admin')
+  const auth = useAuthStore()
 
-  if (to.meta.requiresAuth && !adminLogado) {
+  if (to.meta.requiresAuth && !auth.adminLogado) {
     next('/gestao')
   } else {
     next()

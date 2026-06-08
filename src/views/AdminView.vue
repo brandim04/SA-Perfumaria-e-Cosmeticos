@@ -2,9 +2,10 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../lib/supabase'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
-
+const auth = useAuthStore()
 const admin = ref(JSON.parse(localStorage.getItem('admin')) || null)
 
 const totalPedidosGeral = ref(0)
@@ -24,7 +25,7 @@ const ticketMedio = computed(() => {
 })
 
 function logout() {
-  localStorage.removeItem('admin')
+  auth.logout()
   router.push('/gestao')
 }
 

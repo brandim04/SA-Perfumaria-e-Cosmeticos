@@ -1,10 +1,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-
-import { supabase } from '../lib/supabase'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const auth = useAuthStore()
 
 const email = ref('')
 const senha = ref('')
@@ -19,24 +19,14 @@ async function fazerLogin() {
 
   carregando.value = true
 
-  const { data, error } = await supabase
-    .from('usuarios')
-    .select('*')
-    .eq('email', email.value)
-    .eq('senha', senha.value)
-    .single()
+  const resultado = await auth.login(email.value, senha.value)
 
   carregando.value = false
 
-  if (error || !data) {
-    alert('Usuário ou senha inválidos')
+  if (!resultado.sucesso) {
+    alert(resultado.mensagem)
     return
   }
-
-  localStorage.setItem(
-    'admin',
-    JSON.stringify(data)
-  )
 
   router.push('/admin')
 }
