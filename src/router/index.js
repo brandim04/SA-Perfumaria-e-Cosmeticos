@@ -8,6 +8,7 @@ import AdminView from '../views/AdminView.vue'
 import AdminPedidosView from '../views/AdminPedidosView.vue'
 import AdminProdutosView from '../views/AdminProdutosView.vue'
 import AdminClientesView from '../views/AdminClientesView.vue'
+import MeusPedidosView from '../views/MeusPedidosView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -60,6 +61,11 @@ const router = createRouter({
     {
       path: '/login',
       redirect: '/gestao',
+    },
+    {
+      path: '/meus-pedidos',
+      name: 'meus-pedidos',
+      component: MeusPedidosView,
     },
   ],
 })
