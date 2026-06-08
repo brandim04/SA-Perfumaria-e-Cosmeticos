@@ -7,6 +7,7 @@ import LoginView from '../views/LoginView.vue'
 import AdminView from '../views/AdminView.vue'
 import AdminPedidosView from '../views/AdminPedidosView.vue'
 import AdminProdutosView from '../views/AdminProdutosView.vue'
+import AdminClientesView from '../views/AdminClientesView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -50,7 +51,13 @@ const router = createRouter({
       name: 'admin-produtos',
       component: AdminProdutosView,
       meta: { requiresAuth: true }
-    }
+    },
+    {
+      path: '/admin/clientes',
+      name: 'admin-clientes',
+      component: AdminClientesView,
+  meta: { requiresAuth: true }
+    },
   ],
 })
 
