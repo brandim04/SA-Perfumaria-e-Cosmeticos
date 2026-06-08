@@ -7,6 +7,7 @@ const router = useRouter()
 
 const admin = ref(JSON.parse(localStorage.getItem('admin')) || null)
 
+const totalPedidosGeral = ref(0)
 const totalPedidos = ref(0)
 const totalClientes = ref(0)
 const totalProdutos = ref(0)
@@ -24,7 +25,7 @@ const ticketMedio = computed(() => {
 
 function logout() {
   localStorage.removeItem('admin')
-  router.push('/login')
+  router.push('/gestao')
 }
 
 async function carregarMetricas() {
@@ -58,6 +59,7 @@ async function carregarMetricas() {
     pedido.status === 'Pago' || pedido.status === 'Concluído'
   )
 
+  totalPedidosGeral.value = pedidos.length
   totalPedidos.value = pedidosValidos.length
   totalClientes.value = clientes.length
   totalProdutos.value = produtos.length
@@ -144,40 +146,41 @@ onMounted(() => {
     </header>
 
     <section class="metricas">
-      <div class="metrica-card">
-        <span>Pedidos válidos</span>
-        <strong>{{ totalPedidos }}</strong>
-        <small>Pagos ou concluídos</small>
-      </div>
+  <div class="metrica-card">
+    <span>Total de pedidos</span>
+    <strong>{{ totalPedidosGeral }}</strong>
+    <small>Todos os pedidos recebidos</small>
+  </div>
 
-      <div class="metrica-card">
-        <span>Clientes</span>
-        <strong>{{ totalClientes }}</strong>
-        <small>Cadastrados na loja</small>
-      </div>
+  <div class="metrica-card alerta">
+    <span>Pedidos pendentes</span>
+    <strong>{{ pedidosPendentes }}</strong>
+    <small>Aguardando confirmação</small>
+  </div>
 
-      <div class="metrica-card">
-        <span>Produtos</span>
-        <strong>{{ totalProdutos }}</strong>
-        <small>Disponíveis no sistema</small>
-      </div>
+  <div class="metrica-card destaque">
+    <span>Faturamento</span>
+    <strong>R$ {{ faturamentoTotal.toFixed(2) }}</strong>
+    <small>Pedidos pagos ou concluídos</small>
+  </div>
 
-      <div class="metrica-card destaque">
-        <span>Faturamento</span>
-        <strong>R$ {{ faturamentoTotal.toFixed(2) }}</strong>
-        <small>Somente pedidos válidos</small>
-      </div>
-    </section>
+  <div class="metrica-card">
+    <span>Clientes</span>
+    <strong>{{ totalClientes }}</strong>
+    <small>Cadastrados na loja</small>
+  </div>
+
+  <div class="metrica-card">
+    <span>Produtos</span>
+    <strong>{{ totalProdutos }}</strong>
+    <small>Disponíveis no sistema</small>
+  </div>
+</section>
 
     <section class="indicadores">
       <div class="indicador">
         <span>Ticket médio</span>
         <strong>R$ {{ ticketMedio.toFixed(2) }}</strong>
-      </div>
-
-      <div class="indicador">
-        <span>Pedidos pendentes</span>
-        <strong>{{ pedidosPendentes }}</strong>
       </div>
 
       <div class="indicador">
@@ -191,7 +194,7 @@ onMounted(() => {
         to="/admin/pedidos"
         class="atalho-card"
       >
-        <span class="numero">{{ pedidosPendentes }}</span>
+        <span class="numero">{{ totalPedidosGeral }}</span>
         <h2>Pedidos</h2>
         <p>Gerencie pedidos, acompanhe pagamentos e altere o status das vendas.</p>
       </router-link>
@@ -363,13 +366,10 @@ onMounted(() => {
   color: white;
   padding: 2rem;
   border-radius: 22px;
-
   display: flex;
   justify-content: space-between;
   align-items: center;
-
   margin-bottom: 2rem;
-
   box-shadow: 0 10px 28px rgba(111, 7, 22, 0.25);
 }
 
@@ -377,13 +377,10 @@ onMounted(() => {
   display: inline-block;
   background: rgba(229, 200, 154, 0.16);
   color: #e5c89a;
-
   padding: 0.35rem 0.7rem;
   border-radius: 999px;
-
   font-size: 0.8rem;
   font-weight: bold;
-
   margin-bottom: 0.8rem;
 }
 
@@ -401,28 +398,24 @@ onMounted(() => {
 .logout {
   background: white;
   color: #6f0716;
-
   border: none;
   border-radius: 999px;
-
   padding: 0.85rem 1.5rem;
-
   font-weight: bold;
   cursor: pointer;
 }
 
 .metricas {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(5, 1fr);
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .metrica-card {
   background: white;
   border-radius: 18px;
   padding: 1.4rem;
-
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
@@ -447,6 +440,10 @@ onMounted(() => {
   border: 2px solid #e5c89a;
 }
 
+.alerta {
+  border: 2px solid #fff3cd;
+}
+
 .indicadores {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -458,11 +455,9 @@ onMounted(() => {
   background: white;
   border-radius: 16px;
   padding: 1rem 1.3rem;
-
   display: flex;
   justify-content: space-between;
   align-items: center;
-
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
 }
 
@@ -487,14 +482,10 @@ onMounted(() => {
   background: white;
   color: #333;
   text-decoration: none;
-
   border-radius: 18px;
   padding: 1.5rem;
-
   min-height: 150px;
-
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-
   transition: 0.2s;
 }
 
@@ -517,19 +508,14 @@ onMounted(() => {
   position: absolute;
   top: 1rem;
   right: 1rem;
-
   min-width: 34px;
   height: 34px;
-
   border-radius: 999px;
-
   background: #f8f6f4;
   color: #6f0716;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   font-weight: bold;
 }
 
@@ -537,7 +523,6 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
-
   margin-bottom: 1.5rem;
 }
 
@@ -546,7 +531,6 @@ onMounted(() => {
   background: white;
   border-radius: 18px;
   padding: 1.5rem;
-
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
@@ -556,7 +540,6 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-
   margin-bottom: 1rem;
 }
 
@@ -584,7 +567,6 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-
   padding: 0.9rem 0;
   border-bottom: 1px solid #eee;
 }
@@ -608,10 +590,8 @@ onMounted(() => {
 .badge-estoque,
 .badge-aniversario {
   min-width: 42px;
-
   padding: 0.4rem 0.7rem;
   border-radius: 999px;
-
   text-align: center;
   font-weight: bold;
   font-size: 0.85rem;
@@ -670,7 +650,6 @@ td {
 .status {
   padding: 0.35rem 0.7rem;
   border-radius: 999px;
-
   font-size: 0.8rem;
   font-weight: bold;
 }
@@ -706,5 +685,17 @@ td {
   .extras-grid {
     grid-template-columns: 1fr;
   }
+
+  @media (max-width: 1100px) {
+  .metricas {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 650px) {
+  .metricas {
+    grid-template-columns: 1fr;
+  }
+}
 }
 </style>
